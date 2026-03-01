@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Emotion Analyzer</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f4f8;
+            padding: 20px;
+        }
+
+        .container {
+            width: 420px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        video {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        .emotion {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        .bar {
+            height: 22px;
+            background: #ddd;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4caf50, #81c784);
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>🎭 AI Emotion Analyzer</h2>
+
+    <p>🎥 Live Camera</p>
+    <video id="video" autoplay></video>
+
+    <p class="emotion" id="emotionText">🙂 Emotion: —</p>
+
+    <p>📊 Confidence</p>
+    <div class="bar">
+        <div class="fill" id="confidenceBar"></div>
+    </div>
+</div>
+
+<script>
+navigator.mediaDevices.getUserMedia({ video: true })
+.then(stream => {
+    document.getElementById("video").srcObject = stream;
+});
+
+// Emotion → Emoji map
+const emotionEmojis = {
+    "Angry": "😠",
+    "Disgust": "🤢",
+    "Fear": "😨",
+    "Happy": "😄",
+    "Sad": "😢",
+    "Surprise": "😲",
+    "Neutral": "😐",
+    "No face detected": "🚫",
+    "error": "⚠️"
+};
+
+function sendFrame() {
+    const video = document.getElementById("video");
+    const canvas = document.createElement("canvas");
+    canvas.width = 300;
+    canvas.height = 300;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, 300, 300);
+
+    const image = canvas.toDataURL("image/jpeg");
+
+    fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image })
+    })
+    .then(res => res.json())
+    .then(data => {
+        const emoji = emotionEmojis[data.emotion] || "🙂";
+
+        document.getElementById("emotionText").innerText =
+            `${emoji} Emotion: ${data.emotion} (${(data.confidence*100).toFixed(2)}%)`;
+
+        document.getElementById("confidenceBar").style.width =
+            (data.confidence * 100) + "%";
+    });
+}
+
+// 🔁 Auto detect every 2 seconds
+setInterval(sendFrame, 2000);
+</script>
+
+</body>
+</html>
